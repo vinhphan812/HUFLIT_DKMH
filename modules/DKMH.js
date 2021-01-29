@@ -14,14 +14,15 @@ class APIHuflit {
 			resolveWithFullResponse: true,
 			simple: false,
 			headers: {
-				"user-agent":
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36 Edg/84.0.522.59",
 				accept:
 					"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 				"accept-language": "vi,en-US;q=0.9,en;q=0.8",
+				"user-agent":
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36 Edg/84.0.522.59",
 			},
 		});
 	}
+
 	requestServer(data = { URI, formData: "", type: 0, headers }) {
 		let form = {
 			uri: API_SERVER[data.type] + data.URI,
@@ -32,6 +33,7 @@ class APIHuflit {
 		};
 		return request(form);
 	}
+
 	login({ user, pass }) {
 		return new Promise(async (resolve, reject) => {
 			try {
@@ -43,20 +45,21 @@ class APIHuflit {
 					},
 					type: 0,
 				});
+
+				const userName = $("a.stylecolor span").text();
+
 				await this.requestServer({
 					URI: "/Home/DangKyHocPhan",
 					type: 0,
 				});
-				if (
-					$("a.stylecolor>span:nth-child(1)")
-						.text()
-						.indexOf(user) >= 0
-				)
+
+				if (userName.indexOf(user) >= 0)
 					resolve({
 						isDone: true,
-						cookie: this.jar.getCookieString(API_SERVER),
-						name: $("a.stylecolor span").text(),
+						cookie: this.jar.getCookieString(API_SERVER[0]),
+						name: userName,
 					});
+
 				reject({ isDone: false, msg: "Wrong user or pass" });
 			} catch (err) {
 				reject("server error");
@@ -93,19 +96,6 @@ class APIHuflit {
 			this.TenHP = TenHP;
 			this.idMon = idMon;
 		}
-	}
-	FindMaHP(MaLHP, IdMon) {
-		return new Promise(async (resolve, reject) => {
-			await GetMaLHP(IdMon, MaLHP);
-		});
-		// let ListClass = [];
-		// for (var i = 0; i < MaLHP.length; i++) {
-		// 	var ListLop = this.ListMaHP.find((item) => item.idMon === IdMon);
-		// 	ListClass.push(
-		// 		ListLop.ListLHP.find((item) => item.MaLHP == MaLHP[i])
-		// 	);
-		// }
-		// return ListClass;
 	}
 	GetMaLHP(data = { MaLT, MaTH: false, IdMon }) {
 		return new Promise(async (resolve, reject) => {
