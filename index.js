@@ -4,8 +4,8 @@ var readline = require("readline-sync");
 
 (async () => {
 	var user = await DK.login({
-			user: "19dh110967",
-			pass: "Phanthanhvinh@@@1",
+			user: "mssv",
+			pass: "matkhau",
 		}).catch((err) => console.log(err)),
 		DS = await DK.GetDanhSachMonHoc().catch((err) => console.error(err)); // crawl idMon ở đây
 
