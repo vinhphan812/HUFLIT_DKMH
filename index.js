@@ -4,13 +4,15 @@ var readline = require("readline-sync");
 
 (async () => {
 	var user = await DK.login({
-			user: "19dh110967",
-			pass: "Phanthanhvinh@@@1",
-		}).catch((err) => console.log(err)),
-		DS = await DK.GetDanhSachMonHoc().catch((err) => console.error(err)); // crawl idMon ở đây
+		user: "19dh110967",
+		pass: "Phanthanhvinh@@1",
+	});
 
-	console.log(user);
+	if (!user.isDone) return console.log(user);
+
+	DS = await DK.GetDanhSachMonHoc().catch((err) => console.error(err)); // crawl idMon
 	console.table(DS);
+	console.log(user);
 
 	//? Nhap id mon, ma LHP LyThuyet, ma LHP ThucHanh
 

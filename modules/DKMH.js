@@ -1,15 +1,21 @@
-var request = require("request-promise");
-var cheerio = require("cheerio");
+var request = require("request-promise"),
+	cheerio = require("cheerio");
 
 const API_SERVER = [
 	"https://portal.huflit.edu.vn",
 	"https://dkmh.huflit.edu.vn",
 ];
 
+function makeURL(uri, params = {}, typeURL = 0) {
+	let url = API_SERVER[typeURL] + uri;
+	if (Object.keys(params).length == 0) return url;
+	let paramsArr = [];
+	for (var key in params) paramsArr.push(`${key}=${params[key]}`);
+	return `${url}?${paramsArr.join("&")}`;
+}
 class APIHuflit {
 	constructor() {
 		this.jar = request.jar();
-
 		request = request.defaults({
 			resolveWithFullResponse: true,
 			simple: false,
@@ -23,9 +29,11 @@ class APIHuflit {
 		});
 	}
 
-	requestServer(data = { URI, formData: "", type: 0, headers }) {
+	requestServer(data = { URI, formData: "" }) {
+		console.log(data.URI);
+
 		let form = {
-			uri: API_SERVER[data.type] + data.URI,
+			uri: data.URI,
 			jar: this.jar,
 			method: typeof data.formData === "object" ? "post" : "get",
 			formData: data.formData,
@@ -38,30 +46,34 @@ class APIHuflit {
 		return new Promise(async (resolve, reject) => {
 			try {
 				const $ = await this.requestServer({
-					URI: "/Login",
+					URI: makeURL("/Login"),
 					formData: {
 						txtTaiKhoan: user,
 						txtMatKhau: pass,
 					},
-					type: 0,
 				});
 
 				const userName = $("a.stylecolor span").text();
 
-				await this.requestServer({
-					URI: "/Home/DangKyHocPhan",
-					type: 0,
-				});
-
-				if (userName.indexOf(user) >= 0)
-					resolve({
-						isDone: true,
-						cookie: this.jar.getCookieString(API_SERVER[0]),
-						name: userName,
+				//? Check Login Success
+				if (!userName.includes(user))
+					return resolve({
+						isDone: false,
+						msg: "Wrong user or pass",
 					});
 
-				reject({ isDone: false, msg: "Wrong user or pass" });
+				//? request get cookie DangKiHocPhan
+				await this.requestServer({
+					URI: makeURL("/Home/DangKyHocPhan"),
+				});
+
+				resolve({
+					isDone: true,
+					cookie: this.jar.getCookieString(API_SERVER[0]),
+					name: userName,
+				});
 			} catch (err) {
+				console.log(err);
 				reject("server error");
 			}
 		});
@@ -70,17 +82,20 @@ class APIHuflit {
 		return new Promise(async (resolve, reject) => {
 			try {
 				const $ = await this.requestServer({
-					URI: "/DangKyHocPhan/DanhSachHocPhan?typeId=KH&id=",
-					type: 1,
+					URI: makeURL(
+						"/DangKyHocPhan/DanhSachHocPhan",
+						{ typeId: "KH", id: "" },
+						1
+					),
 				});
 				const DSHP = $(
 					"#DanhSachLop>table>tbody>tr:not(:first-child)"
 				);
 				let list = [];
-				DSHP.each(function (i, e) {
-					var mon = $(e).children("td");
+				DSHP.each(function () {
+					var mon = $(this).children("td");
 					if (mon.length == 6) {
-						const tenHP = $(e)
+						const tenHP = $(this)
 								.children("td:nth-child(3)")
 								.text(),
 							id = $("a", mon).attr().href.split("'")[1];
@@ -101,8 +116,11 @@ class APIHuflit {
 		return new Promise(async (resolve, reject) => {
 			try {
 				const $ = await this.requestServer({
-					URI: `/DangKyHocPhan/DanhSachLopHocPhan?id=${data.IdMon}&registType=KH`,
-					type: 1,
+					URI: makeURL(
+						"/DangKyHocPhan/DanhSachLopHocPhan",
+						{ id: data.Idmon, registType: "KH" },
+						1
+					),
 				});
 				const listEl = $(
 					"form[name='Frm'] div.cn-study-unit>table>tbody>tr"
@@ -112,6 +130,7 @@ class APIHuflit {
 					const LT = $(listEl[i]),
 						CodeLT = $(LT).children("td:nth-child(3)").text(),
 						IdLT = $("td:nth-child(1)>input", LT).attr().id;
+
 					if (CodeLT === data.MaLT) {
 						console.log("Mã lớp Lý Thuyết: " + CodeLT);
 						CodeID.push(IdLT);
@@ -146,10 +165,19 @@ class APIHuflit {
 		return new Promise(async (resolve, reject) => {
 			try {
 				const $ = await this.requestServer({
-						URI: `/DangKyHocPhan/DangKy?Hide=${CodeMonStr}&acceptConflict=${acceptConflict}&classStudyUnitConflictId=${idLHP}&RegistType=HK`,
-						type: 1,
+						URI: makeURL(
+							"/DangKyHocPhan/DangKy",
+							{
+								Hide: CodeMonStr,
+								acceptConflict: acceptConflict,
+								classStudyUnitConflictId: idLHP,
+								RegistType: "KH",
+							},
+							1
+						),
 					}),
 					res = JSON.parse($("body").text());
+
 				if (res.State) resolve(res.Msg);
 				else resolve(await this.DKMH(CodeMonStr, res.Obj1, true));
 			} catch (error) {
